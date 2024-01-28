@@ -1,85 +1,72 @@
 // benches/trie_insert_benchmark.rs
 
-use criterion::{criterion_group, criterion_main, Criterion};
-use you_autocomplete_me::Trie;
+use std::sync::Arc;
 
-fn insert_benchmark(c: &mut Criterion) {
-    c.bench_function("insert_words", |b| {
-        b.iter(|| {
-            let mut trie = Trie::default();
-            trie.insert("apple".into());
-            trie.insert("banana".into());
-            trie.insert("orange".into());
-            trie.insert("orange juice".into());
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use you_autocomplete_me::AutocompletionEngine;
+
+fn compare_arc_str(c: &mut Criterion) {
+    let mut group = c.benchmark_group("Insert");
+    for i in [100, 1000].iter() {
+        group.bench_with_input(BenchmarkId::new("Arc", i), i, |b, i| {
+            b.iter(|| {
+                let mut trie = AutocompletionEngine::default();
+                for _ in 0..*i {
+                    let b = uuid::Uuid::new_v4().to_string();
+                    let bytes = b.as_bytes();
+                    let b2: Arc<str> = b.clone().into();
+                    trie.insert(bytes, b2);
+                }
+            })
         });
-    });
 
-    c.bench_function("insert_gibberish", |b| {
-        b.iter(|| {
-            let mut trie = Trie::default();
-            for _ in 0..100000 {
-                trie.insert(uuid::Uuid::new_v4().to_string());
-            }
+        group.bench_with_input(BenchmarkId::new("String", i), i, |b, i| {
+            b.iter(|| {
+                let mut trie = AutocompletionEngine::default();
+                for _ in 0..*i {
+                    let b = uuid::Uuid::new_v4().to_string();
+                    let bytes = b.as_bytes();
+                    let b2: String = b.clone();
+                    trie.insert(bytes, b2);
+                }
+            })
         });
-    });
+    }
+    group.finish();
 
-    c.bench_function("insert_double_gibberish", |b| {
-        b.iter(|| {
-            let mut trie = Trie::default();
-            for _ in 0..100 {
-                trie.insert(format!("{}-{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4()));
-            }
-        });
-    });
+    group = c.benchmark_group("Search");
 
-    c.bench_function("search", |b| {
-        let mut trie = Trie::default();
-        for _ in 0..100 {
-            trie.insert(uuid::Uuid::new_v4().to_string());
+    for i in [100, 1000].iter() {
+        let mut trie = AutocompletionEngine::default();
+        for _ in 0..*i {
+            let b = uuid::Uuid::new_v4().to_string();
+            let bytes = b.as_bytes();
+            let b2: Arc<str> = b.clone().into();
+            trie.insert(bytes, b2);
         }
-        b.iter(|| trie.search("sd", None));
-    });
-
-    c.bench_function("search_double_gibberish", |b| {
-        let mut trie = Trie::default();
-        for _ in 0..100 {
-            trie.insert(format!("{}-{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4()));
-        }
-        b.iter(|| {
-            trie.search("sd", None);
+        group.bench_function(BenchmarkId::new("Arc", i), |b| {
+            b.iter(|| {
+                trie.full_text_search("sd".as_bytes(), None);
+            })
         });
-    });
 
-    c.bench_function("search_double_gibberish_many", |b| {
-        let mut trie = Trie::default();
-        for _ in 0..1000 {
-            trie.insert(format!("{}-{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4()));
+        let mut trie = AutocompletionEngine::default();
+        for _ in 0..*i {
+            let b = uuid::Uuid::new_v4().to_string();
+            let bytes = b.as_bytes();
+            let b2: Arc<str> = b.clone().into();
+            trie.insert(bytes, b2);
         }
-        b.iter(|| {
-            trie.search("sd", None);
-        });
-    });
 
-    c.bench_function("search_long_double_gibberish", |b| {
-        let mut trie = Trie::default();
-        for _ in 0..1000 {
-            trie.insert(format!("{}-{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4()));
-        }
-        b.iter(|| {
-            trie.search("sdefg", None);
+        group.bench_function(BenchmarkId::new("String", i), |b| {
+            b.iter(|| {
+                
+                trie.full_text_search("sd".as_bytes(), None);
+            })
         });
-    });
-
-    c.bench_function("search_many_double_gibberish_long", |b| {
-        let mut trie = Trie::default();
-        for _ in 0..1000 {
-            trie.insert(format!("{}-{}", uuid::Uuid::new_v4(), uuid::Uuid::new_v4()));
-        }
-        b.iter(|| {
-            trie.search("sd6", None);
-        });
-    });
+    }
+    group.finish();
 }
 
-criterion_group!(benches, insert_benchmark);
+criterion_group!(benches, compare_arc_str);
 criterion_main!(benches);

@@ -23,6 +23,7 @@ itertools = "0.12"
 [dev-dependencies]
 criterion = { version = "0.5", features = ["html_reports"] }
 uuid = {version="1.7", features = ["v4"]}
+test-case = "*"
 
 [[bench]]
 name =  "trie_insert_benchmark"

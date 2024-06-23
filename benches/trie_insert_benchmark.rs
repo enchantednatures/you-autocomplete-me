@@ -60,7 +60,6 @@ fn compare_arc_str(c: &mut Criterion) {
 
         group.bench_function(BenchmarkId::new("String", i), |b| {
             b.iter(|| {
-                
                 trie.full_text_search("sd".as_bytes(), None);
             })
         });

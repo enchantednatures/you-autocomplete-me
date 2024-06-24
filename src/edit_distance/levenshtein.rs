@@ -56,6 +56,7 @@ mod tests {
     use test_case::test_case;
 
     #[test_case("kitten", "sitting", 3; "default")]
+    #[test_case("sitting", "sitting", 0; "same")]
     fn test_levenshtein(l: &str, r: &str, expected: usize) {
         assert_eq!(expected, l.levenshtein(r))
     }

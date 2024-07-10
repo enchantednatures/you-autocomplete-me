@@ -34,12 +34,12 @@ enum Options {
     FuzzySearchOptions(FuzzySearchOptions),
 }
 
-struct FuzzySearchOptions {
+pub struct FuzzySearchOptions {
     fuzzy: bool,
     levenstein: bool,
 }
 
-struct SearchOptions {
+pub struct SearchOptions {
     fuzzy: bool,
     levenstein: bool,
 }
@@ -127,6 +127,27 @@ mod tests {
 
         let expected = vec!["world"];
         let actual = trie.search("wor");
+        dbg!(&actual);
+        assert_equal(expected, actual)
+    }
+
+    #[test]
+    fn get_middle_completions() {
+        let mut trie = TrieNode::default();
+        let values = vec![
+            "This is a test",
+            "I don't think I'll pass the science test",
+            "It is important to test software",
+            "testing, testing, testing",
+        ];
+        for val in &values {
+            trie.insert(val);
+        }
+        // dbg!(trie);
+        // panic!();
+
+        let expected: Vec<&str> = Vec::new();
+        let actual = trie.search("test");
         dbg!(&actual);
         assert_equal(expected, actual)
     }

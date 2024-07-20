@@ -1,6 +1,6 @@
 use super::MAX_STRING_LEN;
 
-struct LevenshteinDistanceOptions { 
+struct LevenshteinDistanceOptions {
     insert_score: usize,
 }
 struct LevenshteinDistance {
@@ -9,7 +9,7 @@ struct LevenshteinDistance {
 impl LevenshteinDistance {
     fn new(options: Option<LevenshteinDistanceOptions>) -> Self {
         Self {
-            options: options.unwrap_or(LevenshteinDistanceOptions {insert_score: 1}),
+            options: options.unwrap_or(LevenshteinDistanceOptions { insert_score: 1 }),
         }
     }
 

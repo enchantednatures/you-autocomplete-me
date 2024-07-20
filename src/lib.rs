@@ -7,7 +7,8 @@ mod match_profile;
 mod old;
 mod score_configuration;
 
-use std::collections::HashMap;
+use std::ascii::AsciiExt;
+use std::collections::{HashMap, HashSet};
 use std::ops::{Deref, DerefMut};
 use std::str::Chars;
 
@@ -162,7 +163,7 @@ impl<'a> Match<'a> {
 #[derive(Default, Debug)]
 pub struct TrieNode {
     children: HashMap<char, TrieNode>,
-    word: Option<String>,
+    word: HashSet<String>,
 }
 
 impl Deref for TrieNode {
@@ -209,28 +210,41 @@ impl TrieNode {
             return;
         }
 
+        let lowercased = value.to_ascii_lowercase();
+
         self.m_insert(value.chars(), value);
+        self.m_insert(lowercased.chars(), value);
+
+        for i in 1..value.len() {
+            self.m_insert(value[i..].chars(), value);
+            self.m_insert(lowercased[i..].chars(), value);
+        }
     }
 
     fn m_insert(&mut self, mut value: Chars<'_>, word: &str) {
         match value.next() {
             Some(c) => self.entry(c).or_default().m_insert(value, word),
-            None => self.word = Some(word.into()),
+            None => {
+                self.word.insert(word.into());
+            }
         }
     }
 
     pub fn search(&self, value: &str) -> Vec<&str> {
-        self.m_search(value.chars(), SearchOptions::default())
+        match value.chars().any(|c| c.is_uppercase()) {
+            false => self.search_case_insensitive(value.chars(), SearchOptions::default()),
+            _ => todo!(),
+        }
     }
 
     pub fn search_with_options(&self, value: &str, options: SearchOptions) -> Vec<&str> {
-        self.m_search(value.chars(), options)
+        self.search_case_insensitive(value.chars(), options)
     }
 
-    fn m_search(&self, mut value: Chars<'_>, options: SearchOptions) -> Vec<&str> {
+    fn search_case_insensitive(&self, mut value: Chars<'_>, options: SearchOptions) -> Vec<&str> {
         match value.next() {
-            Some(c) => match self.get(&c) {
-                Some(node) => node.m_search(value, options),
+            Some(c) => match self.get(&c.to_ascii_lowercase()) {
+                Some(node) => node.search_case_insensitive(value, options),
                 None => {
                     // if options.fuzzy
                     // {}
@@ -244,11 +258,10 @@ impl TrieNode {
         self.children
             .values()
             .flat_map(|v| {
-                let words = v.collect();
-                if let Some(word) = &v.word {
-                    return words.into_iter().chain([word.as_str()]).collect_vec();
-                }
-                words
+                v.collect()
+                    .into_iter()
+                    .chain(v.word.iter().map(|x| x.as_str()))
+                    .collect_vec()
             })
             .collect_vec()
     }
@@ -256,15 +269,36 @@ impl TrieNode {
 
 #[cfg(test)]
 mod tests {
-
     use itertools::assert_equal;
 
-    use crate::old::Score;
-
     use self::builder::{WithMatchConfiguration, WithScoreConfiguration};
-    use self::edit_distance::levenshtein::{self, levenshtein_distance};
+    use self::edit_distance::levenshtein::levenshtein_distance;
 
     use super::*;
+
+    #[test]
+    fn get_all_autocompletions_with_mixed_cases() {
+        let mut trie = TrieNode::default();
+        let values = vec![
+            "hello",
+            "world",
+            "help",
+            "helium",
+            "spark",
+            "strange",
+            "stranger",
+            "World",
+            "hello-world",
+        ];
+        for val in &values {
+            trie.insert(val);
+        }
+
+        let expected = ["world", "World", "hello-world"];
+        let actual = trie.search("wor");
+        dbg!(&actual);
+        assert_equal(expected.iter().sorted(), actual.iter().sorted())
+    }
 
     #[test]
     fn get_all_autocompletions() {
@@ -275,8 +309,6 @@ mod tests {
         for val in &values {
             trie.insert(val);
         }
-        // dbg!(trie);
-        // panic!();
 
         let expected = vec!["world"];
         let actual = trie.search("wor");

@@ -212,10 +212,10 @@ impl TrieNode {
 
         let lowercased = value.to_ascii_lowercase();
 
-        self.m_insert(value.chars(), value);
-        self.m_insert(lowercased.chars(), value);
+        // self.m_insert(value.chars(), value);
+        // self.m_insert(lowercased.chars(), value);
 
-        for i in 1..value.len() {
+        for i in 0..=value.len() {
             self.m_insert(value[i..].chars(), value);
             self.m_insert(lowercased[i..].chars(), value);
         }
@@ -230,28 +230,35 @@ impl TrieNode {
         }
     }
 
-    pub fn search(&self, value: &str) -> Vec<&str> {
+    pub fn search(&self, value: &str) -> HashSet<&str> {
         match value.chars().any(|c| c.is_uppercase()) {
             false => self.search_case_insensitive(value.chars(), SearchOptions::default()),
             _ => todo!(),
         }
     }
 
-    pub fn search_with_options(&self, value: &str, options: SearchOptions) -> Vec<&str> {
+    pub fn search_with_options(&self, value: &str, options: SearchOptions) -> HashSet<&str> {
         self.search_case_insensitive(value.chars(), options)
     }
 
-    fn search_case_insensitive(&self, mut value: Chars<'_>, options: SearchOptions) -> Vec<&str> {
+    fn search_case_insensitive(
+        &self,
+        mut value: Chars<'_>,
+        options: SearchOptions,
+    ) -> HashSet<&str> {
         match value.next() {
             Some(c) => match self.get(&c.to_ascii_lowercase()) {
-                Some(node) => node.search_case_insensitive(value, options),
+                Some(node) => node
+                    .search_case_insensitive(value, options)
+                    .drain()
+                    .collect(),
                 None => {
                     // if options.fuzzy
                     // {}
-                    vec![]
+                    HashSet::new()
                 }
             },
-            None => self.collect(),
+            None => HashSet::from_iter(self.collect()),
         }
     }
     fn collect(&self) -> Vec<&str> {
@@ -316,26 +323,24 @@ mod tests {
         assert_equal(expected, actual)
     }
 
-    #[ignore = "WIP"]
+    // #[ignore = "WIP"]
     #[test]
     fn get_middle_completions() {
         let mut trie = TrieNode::default();
-        let values = vec![
+        let expected = vec![
+            "This is a test!",
             "This is a test",
+            "I don't think I'll pass the science test!",
             "I don't think I'll pass the science test",
             "It is important to test software",
             "testing, testing, testing",
         ];
-        for val in &values {
+        for val in &expected {
             trie.insert(val);
         }
-        // dbg!(trie);
-        // panic!();
-
-        let expected: Vec<&str> = Vec::new();
         let actual = trie.search("test");
         dbg!(&actual);
-        assert_equal(expected, actual)
+        assert_equal(expected.iter().sorted(), actual.iter().sorted())
     }
 
     #[test]

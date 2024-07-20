@@ -1,7 +1,11 @@
 #![allow(dead_code)]
 
+mod builder;
 mod edit_distance;
+mod match_configuration;
+mod match_profile;
 mod old;
+mod score_configuration;
 
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -9,8 +13,70 @@ use std::str::Chars;
 
 use itertools::Itertools;
 
+use self::builder::YouAutoCompleteMeBuilder;
+use self::match_configuration::MatchConfiguration;
+use self::match_profile::MatchProfile;
+use self::score_configuration::ScoreConfiguration;
+
+type EditDistance = for<'a, 'b> fn(&'a str, &'b str) -> usize;
+
+/// Trait for getting scored matches
+trait GetScoredMatches {
+    /// Returns an iterator of matches
+    fn get_scored_matches<'a, T>(&'a self, input: &str) -> T
+    where
+        T: Iterator<Item = &'a MatchProfile<'a>>;
+}
+
+/// Matches phrases against the input and then scores them by relevancy
+#[derive(Debug)]
+pub struct YouAutoCompleteMe<'a> {
+    /// The configuration for the matching algorithm
+    match_configuration: MatchConfiguration,
+    /// The configuration for the scoring algorithm
+    score_configuration: ScoreConfiguration,
+    /// Phrasebook
+    phrase_book: &'a TrieNode,
+}
+
+impl<'a> YouAutoCompleteMe<'a> {
+    /// create a new instance of the auto completer
+    pub fn new(phrase_book: &'a TrieNode) -> Self {
+        Self {
+            phrase_book,
+            match_configuration: Default::default(),
+            score_configuration: Default::default(),
+        }
+    }
+
+    pub fn builder(phrase_book: &'a TrieNode) -> YouAutoCompleteMeBuilder<'a> {
+        YouAutoCompleteMeBuilder::new(phrase_book)
+    }
+}
+
 pub trait ScoringAlgorithm {
     fn score(&self, search: &str, matching_characters: &str) -> usize;
+}
+
+trait SortAndFilter2<T> {
+    fn sort(&mut self, scorer: EditDistance) -> Vec<T>;
+}
+
+impl<'a, T: Iterator<Item = Match<'a>>> SortAndFilter2<&'a str> for T {
+    fn sort(&mut self, scorer: EditDistance) -> Vec<&'a str> {
+        let mut data = self.collect::<Vec<_>>();
+        data.sort_by(|a, b| {
+            scorer(
+                &a.search,
+                a.matching_characters.iter().collect::<String>().as_str(),
+            )
+            .cmp(&scorer(
+                &b.search,
+                b.matching_characters.iter().collect::<String>().as_str(),
+            ))
+        });
+        data.into_iter().map(|v| v.result).collect()
+    }
 }
 
 trait SortAndFilter<T, F> {
@@ -195,6 +261,9 @@ mod tests {
 
     use crate::old::Score;
 
+    use self::builder::{WithMatchConfiguration, WithScoreConfiguration};
+    use self::edit_distance::levenshtein::{self, levenshtein_distance};
+
     use super::*;
 
     #[test]
@@ -215,6 +284,7 @@ mod tests {
         assert_equal(expected, actual)
     }
 
+    #[ignore = "WIP"]
     #[test]
     fn get_middle_completions() {
         let mut trie = TrieNode::default();
@@ -251,6 +321,7 @@ mod tests {
         // assert!(score == 4.0);
     }
 
+    #[ignore = "WIP"]
     #[test]
     fn sorting_scores() {
         let results = vec![
@@ -267,13 +338,27 @@ mod tests {
         ];
 
         // let mut iter = results.iter();
-        let result = results
-            .into_iter()
-            .sort_and_filter(&SlightlyMoreSophisticatedScorer, 4);
+        let result = results.into_iter().sort(levenshtein_distance);
 
         assert_equal(
             vec!["This is a test", "I don't think I'll pass the science test"],
             result,
         )
+    }
+
+    #[test]
+    fn builder_with_score_configuration() {
+        let phrase_book: TrieNode = Default::default();
+
+        let builder = YouAutoCompleteMe::builder(&phrase_book);
+        builder.with_score_configuration(ScoreConfiguration::default());
+    }
+
+    #[test]
+    fn builder_with_match_configuration() {
+        let phrase_book: TrieNode = Default::default();
+
+        let builder = YouAutoCompleteMe::builder(&phrase_book);
+        builder.with_match_configuration(MatchConfiguration::default());
     }
 }

@@ -3,7 +3,7 @@ use you_autocomplete_me::TrieNode;
 
 fn compare_arc_str(c: &mut Criterion) {
     let mut group = c.benchmark_group("Insert");
-    for i in [100, 1000].iter() {
+    for i in [100, 1000, 10000].iter() {
         // group.bench_with_input(BenchmarkId::new("Arc", i), i, |b, i| {
         //     b.iter(|| {
         //         let mut trie = TrieNode::default();
@@ -28,14 +28,20 @@ fn compare_arc_str(c: &mut Criterion) {
 
     group = c.benchmark_group("Search");
 
-    for i in [100, 1000].iter() {
+    for i in [100, 1000, 10000].iter() {
         let mut trie = TrieNode::default();
         for _ in 0..*i {
             let b = uuid::Uuid::new_v4().to_string();
             trie.insert(b.as_str());
         }
 
-        group.bench_function(BenchmarkId::new("String", i), |b| {
+        group.bench_function(BenchmarkId::new("Search 3 Characters", i), |b| {
+            b.iter(|| {
+                trie.search("hdc");
+            })
+        });
+
+        group.bench_function(BenchmarkId::new("Search 2 Characters", i), |b| {
             b.iter(|| {
                 trie.search("sd");
             })

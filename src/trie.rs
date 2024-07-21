@@ -69,23 +69,20 @@ impl TrieNode {
             None => HashSet::from_iter(self.collect()),
         }
     }
+
     fn collect(&self) -> Vec<&str> {
         self.children
             .values()
-            .flat_map(|v| {
-                v.collect()
-                    .into_iter()
-                    .chain(v.word.iter().map(|x| x.as_str()))
-                    .collect_vec()
-            })
+            .flat_map(|v| v.collect())
+            .chain(self.word.iter().map(|x| x.as_str()))
             .collect_vec()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use itertools::assert_equal;
     use super::*;
+    use itertools::assert_equal;
 
     #[test]
     fn get_all_autocompletions_with_mixed_cases() {

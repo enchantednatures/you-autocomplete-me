@@ -14,7 +14,7 @@ use itertools::Itertools;
 use self::builder::YouAutoCompleteMeBuilder;
 use self::match_profile::MatchProfile;
 use self::score_configuration::ScoreConfiguration;
-use self::trie::TrieNode;
+pub use self::trie::TrieNode;
 
 type EditDistance = for<'a, 'b> fn(&'a str, &'b str) -> usize;
 

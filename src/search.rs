@@ -58,6 +58,21 @@ pub struct Search<'a> {
 }
 
 impl<'a> Search<'a> {
+    fn new(search: &'a str) -> Self {
+        Self {
+            search,
+            ..Default::default()
+        }
+    }
+
+    fn is_smart_case(&self) -> bool {
+        !self.strict_case && self.search.chars().any(|c| c.is_uppercase())
+    }
+
+    fn capitlized_chars(&self) -> Vec<char> {
+        self.search.chars().filter(|c| c.is_uppercase()).collect()
+    }
+
     fn builder() -> SearchBuilder<NoSearch> {
         SearchBuilder::default()
     }

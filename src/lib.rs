@@ -18,6 +18,10 @@ pub use self::trie::TrieNode;
 
 type EditDistance = for<'a, 'b> fn(&'a str, &'b str) -> usize;
 
+// trait Searcher {
+//     fn search(&self, value: &Search) -> MatchProfile;
+// }
+
 /// Trait for getting scored matches
 trait GetScoredMatches {
     /// Returns an iterator of matches

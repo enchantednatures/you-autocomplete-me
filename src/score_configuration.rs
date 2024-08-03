@@ -2,7 +2,8 @@ use std::collections::HashSet;
 
 static DELIMITERS: &str = " -/_";
 
-#[derive(Debug)]
+/// Builder for [ScoreConfiguration]
+#[derive(Debug, Default)]
 pub struct ScoreConfigurationBuilder {
     word_delimiters: Option<HashSet<char>>,
     character_adjacency_bonus: Option<u8>,
@@ -18,28 +19,24 @@ pub struct ScoreConfigurationBuilder {
 impl ScoreConfigurationBuilder {
     pub fn new() -> Self {
         Self {
-            word_delimiters: None,
-            character_adjacency_bonus: None,
-            character_adjacency_multiplier: None,
-            max_character_adjacency_bonus: None,
-            word_boundary_bonus: None,
-            word_prefix_bonus: None,
-            word_suffix_bonus: None,
-            character_offset_penalty: None,
-            max_offset_penalty: None,
+            ..Default::default()
         }
     }
 
+    /// Set delimiters used to mark word boundaries in the search scoring. 
     pub fn with_word_delimiters(mut self, word_delimiters: HashSet<char>) -> Self {
         self.word_delimiters = Some(word_delimiters);
         self
     }
 
+    /// Sets bonus to adjacent characters in match
     pub fn with_character_adjacency_bonus(mut self, character_adjacency_bonus: u8) -> Self {
         self.character_adjacency_bonus = Some(character_adjacency_bonus);
         self
     }
 
+    /// Sets the multiplier for each additional sequential adjacent characters.
+    /// todo: this would be a good candidate for a doctest
     pub fn with_character_adjacency_multiplier(
         mut self,
         character_adjacency_multiplier: u8,
@@ -157,7 +154,7 @@ mod tests {
         assert!(config.word_delimiters.contains(&SPC));
         assert!(config.word_delimiters.contains(&UNDERSCORE));
         dbg!(&config.word_delimiters);
-               
+
         assert_eq!(config.word_delimiters.len(), 2);
     }
 

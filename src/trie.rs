@@ -1,29 +1,37 @@
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
-use std::ops::{Deref, DerefMut};
 use std::str::Chars;
 
+use crate::match_profile::MatchProfile;
+use crate::search::Search;
+
+/// Represents a data type which can be searched
+pub trait Searcher {
+    type T<'a>;
+
+    /// .
+    fn search<'a>(&self, s: Search<'a>) -> Self::T<'a>;
+}
+
+impl Searcher for TrieNode {
+    type T<'a> = Box<dyn Iterator<Item=MatchProfile<'a>>>;
+
+    fn search<'a>(&self, _s: Search<'a>) -> Self::T<'a> {
+        // _s.search
+        todo!()
+    }
+}
+
+/// Todo: Generic so I can bench Rc<str>
+///
 #[derive(Default, Debug)]
 pub struct TrieNode {
     children: HashMap<char, TrieNode>,
     word: HashSet<String>,
 }
 
-impl Deref for TrieNode {
-    type Target = HashMap<char, TrieNode>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.children
-    }
-}
-
-impl DerefMut for TrieNode {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.children
-    }
-}
-
 impl TrieNode {
+    /// Not documenting as this will not be part of the public api
     pub fn insert(&mut self, value: &str) {
         if value.is_empty() {
             return;
@@ -31,24 +39,25 @@ impl TrieNode {
 
         let lowercased = value.to_ascii_lowercase();
 
-        // self.m_insert(value.chars(), value);
-        // self.m_insert(lowercased.chars(), value);
-
+        // experiment with not doing this... its possible that the search algorithm could account for suffixes?
         for i in 0..=value.len() {
             self.m_insert(value[i..].chars(), value);
-            self.m_insert(lowercased[i..].chars(), value);
+            if lowercased != value {
+                self.m_insert(lowercased[i..].chars(), value)
+            }
         }
     }
 
     fn m_insert(&mut self, mut value: Chars<'_>, word: &str) {
         match value.next() {
-            Some(c) => self.entry(c).or_default().m_insert(value, word),
+            Some(c) => self.children.entry(c).or_default().m_insert(value, word),
             None => {
                 self.word.insert(word.into());
             }
         }
     }
 
+    /// Not documenting due to changes to the api
     pub fn search(&self, value: &str) -> HashSet<&str> {
         match value.chars().any(|c| c.is_uppercase()) {
             false => self.search_case_insensitive(value.chars()),
@@ -56,13 +65,9 @@ impl TrieNode {
         }
     }
 
-    pub fn search_with_options(&self, value: &str) -> HashSet<&str> {
-        self.search_case_insensitive(value.chars())
-    }
-
     fn search_case_insensitive(&self, mut value: Chars<'_>) -> HashSet<&str> {
         match value.next() {
-            Some(c) => match self.get(&c.to_ascii_lowercase()) {
+            Some(c) => match self.children.get(&c.to_ascii_lowercase()) {
                 Some(node) => node.search_case_insensitive(value).drain().collect(),
                 None => HashSet::new(),
             },

@@ -1,5 +1,3 @@
-use crate::search::Search;
-
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub struct MatchProfile<'a> {
     phrase: &'a str,
@@ -22,11 +20,4 @@ impl<'a> MatchProfile<'a> {
             is_smart_case,
         }
     }
-}
-
-impl<'a> From<(&'a Search<'a>, &'a str)> for MatchProfile<'a> {
-    fn from(value: (&'a Search, &'a str)) -> Self {
-        todo!()
-    }
-    // add code here
 }
